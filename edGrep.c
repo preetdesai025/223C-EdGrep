@@ -1,11 +1,13 @@
 /*
  * Editor
  */
-#include<stdlib.h>
-#include<stdio.h>
+#include <stdlib.h>
+#include <stdio.h>
 #include <signal.h>
 #include <setjmp.h>
-#include<unistd.h>
+#include <fcntl.h>
+#include <unistd.h>
+#include <string.h>
 #include "edGrep.h"
 
 char	Q[]	= "";
@@ -14,7 +16,7 @@ int peekc; int lastc; char savedfile[FNSIZE]; char file[FNSIZE]; char linebuf[LB
 char expbuf[ESIZE+4]; int given; unsigned int *addr1, *addr2; unsigned int *dot, *dol, *zero; char genbuf[LBSIZE];
 
 long count; char *nextip; char *linebp; int ninbuf; int	io; int pflag; long lseek(int, long, int);
-int open(char *, int); int creat(char *, int); int close(int); int fork(void); int wait(int *);
+/*int open(char *, int); int creat(char *, int);*/ int close(int); int fork(void); int wait(int *);
 int vflag	= 1; int oflag; int listf; int listn; int col; char *globp; int	tfile = -1;
 int tline; char	*tfname; char *loc1; char *loc2; char ibuff[BLKSIZE]; int iblock = -1;
 char obuff[BLKSIZE]; int oblock	= -1; int ichanged; int	nleft; char WRERR[] = "WRITE ERROR";
@@ -31,27 +33,37 @@ SIG_TYP	oldhup; SIG_TYP	oldquit; /* these two are not in ansi, but we need them 
 #define	SIGHUP	1	/* hangup */
 #define	SIGQUIT	3	/* quit (ASCII FS) */
 
-int main(int argc, char *argv[]) {  char *p1, *p2;  SIG_TYP oldintr;  oldquit = signal(SIGQUIT, SIG_IGN);
-  oldhup = signal(SIGHUP, SIG_IGN);  oldintr = signal(SIGINT, SIG_IGN);
-  if (signal(SIGTERM, SIG_IGN) == SIG_DFL) { signal(SIGTERM, quit); }  argv++;
-  while (argc > 1 && **argv=='-') {
-    switch((*argv)[1]) {
-    case '\0': vflag = 0;  break;
-    case 'q': signal(SIGQUIT, SIG_DFL);  vflag = 1;  break;
-    case 'o': oflag = 1;  break;
-    }
-    argv++;  argc--;
-  }
-  if (oflag) {  p1 = "/dev/stdout";  p2 = savedfile;  while ((*p2++ = *p1++) == 1) { } }
-  if (argc > 1) {  p1 = *argv;  p2 = savedfile;
-    while ((*p2++ = *p1++) == 1) {  if (p2 >= &savedfile[sizeof(savedfile)]) { p2--; }  }  globp = "r";
-  }
-  zero = (unsigned *)malloc(nlall * sizeof(unsigned));  tfname = mkdtemp(tmpXXXXX);  init();
-  if (oldintr!=SIG_IGN) { signal(SIGINT, onintr); }  if (oldhup!=SIG_IGN) { signal(SIGHUP, onhup); }
-  setjmp(savej);
-  commands();
-  quit(0);  return 0;
+int main(int argc, char *argv[]) { 
+  zero = (unsigned *)malloc(nlall * sizeof(unsigned));  tfname = mkdtemp(tmpXXXXX);  init(); setjmp(savej);
+  if(argc < 3) {
+	 printf("Error not enough arguments...\nClosing Program...\n");
+	 exit(1);
+	 }
+  readfile(argv[2]);
+  search_string(argv[1]);
+  getchar();
+  return 0;
 }
+
+void fname(const char* sf){
+   strcpy(file, sf);
+   strcpy(savedfile, sf);
+}
+void readfile(const char* fsave){
+ 	setnoaddr();  fname(fsave); init(); addr2 = zero;
+	if ((io = open(file, 0)) < 0) { lastc = '\n'; error(file); } setwide(); squeeze(0);
+	ninbuf = 0; append(getfile, addr2);  
+}
+int search_string(const char* str){
+   FILE *fp; int line = 1; int result = 0; char temp[GBSIZE];
+   if((fp = fopen(file, "r")) == NULL) { return(-1); }
+   while(fgets(temp, GBSIZE, fp) != NULL){
+        if((strstr(temp, str)) != NULL) { printf("%s", temp); result++; } //end if
+   	line++;
+    } //end While
+   if(result == 0) { printf("0 matches found\n"); }
+   if(fp) { exfile(); }  return 0;
+}//end function
 void commands(void) { unsigned int *a1; int c; int temp; char lastsep;
 	for (;;) {
 	if (pflag) { pflag = 0; addr1 = addr2 = dot; print(); } c = '\n';
