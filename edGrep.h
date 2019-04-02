@@ -1,4 +1,4 @@
-//edgrep.h
+//ed.h
 
 /* make BLKSIZE and LBSIZE 512 for smaller machines */
 #define	BLKSIZE	4096
@@ -22,6 +22,10 @@
 #define	STAR	01
 #define	READ	0
 #define	WRITE	1
+
+void readfile(const char* fsave);
+void fname(const char* sf);
+int search_string(const char* str);
 
 char *getblock(unsigned int atl, int iof);
 char *_getline(unsigned int tl);
